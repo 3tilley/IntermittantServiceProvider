@@ -18,4 +18,4 @@ CREATE TABLE target(
 
 INSERT INTO target VALUES(1, 'www.google.com');
 
-.save data.db
+.save data.db;

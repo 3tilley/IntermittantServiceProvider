@@ -82,6 +82,7 @@ if __name__ == "__main__":
           
         cur.execute(s)
         con.commit()
+        print "Ping data commited"
 #        data = cur.fetchone()
         
 #        print "SQLite version: %s" % data                
