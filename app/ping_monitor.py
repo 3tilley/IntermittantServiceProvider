@@ -37,19 +37,22 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
+    print "Loading index"
     return render_template("index.html")
     
 @app.route('/pings')
 def pings():
     con = None
     try:
-        con = sqlite3.connect(r"..\data.db")
+        print "Connecting to db"
+        con = sqlite3.connect(os.path.join("..","data.db"))
+        print "Connected"
         cur = con.cursor()
         
         cur.execute("select * from ping")
         
         data = cur.fetchall()
-        
+        print "Fetched data"
         return jsonify(makeCells(data, ["timestamp", "min", "max", "mean"]))
     except sqlite3.Error, e:
         
@@ -62,5 +65,5 @@ def pings():
         
     
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0")
     #pings()
