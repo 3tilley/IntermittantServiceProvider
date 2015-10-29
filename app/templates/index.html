@@ -25,7 +25,19 @@ function drawChart() {
         var options = {
           title: 'Pings',
           curveType: 'line',
-          legend: { position: 'bottom' }
+          legend: { position: 'bottom' },
+          vAxes: {0: {
+                      gridlines: {color: 'transparent'},
+                      },
+                  1: {gridlines: {color: 'transparent'},
+                      format:"#%",
+                      viewWindow: {min:0}},
+                  },
+          series: {0: {targetAxisIndex:0},
+                   1:{targetAxisIndex:0},
+                   2:{targetAxisIndex:0},
+                   3:{targetAxisIndex:1}
+                  }
         };
 
         jsonData.rows = jQuery.map(jsonData.rows, function(val) {
@@ -35,9 +47,33 @@ function drawChart() {
 
         var data = new google.visualization.DataTable(jsonData);
        
+           // use a DataView to calculate an x-day moving average
+    var days = 60;
+    var view = new google.visualization.DataView(data);
+    view.setColumns([0, 1, 2, 3, {
+        type: 'number',
+        label: days + '-day Moving Average',
+        calc: function (dt, row) {
+            // calculate average of closing value for last x days,
+            // if we are x or more days into the data set
+            if (row >= days - 1) {
+                var total = 0;
+                for (var i = 0; i < days; i++) {
+                    total += dt.getValue(row - i, 5);
+                }
+                var avg = total / days;
+                return {v: avg, f: avg.toFixed(2)};
+            }
+            else {
+                // return null for < x days
+                return null;
+            }
+        }
+    }]);
+       
         var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
 
-        chart.draw(data, options);
+        chart.draw(view, options);
       }
     </script>
   </head>
