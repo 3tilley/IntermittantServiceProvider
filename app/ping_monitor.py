@@ -28,7 +28,7 @@ def makeCells(dbResults, columns):
     inds = [ i for (i, n, t) in filteredCols]
     
     
-    cols = [{ "id": n, "type": t} for i, n, t in filteredCols]
+    cols = [{ "id": n, "type": t, "label": n} for i, n, t in filteredCols]
     
     rows = [{ "c" : [{"v": row[i]} for i in inds]} for row in dbResults]
 
@@ -56,7 +56,7 @@ def pings():
         
         data = cur.fetchall()
         print "Fetched data"
-        return jsonify(makeCells(data, ["timestamp", "min", "max", "mean", "count", "lost"]))
+        return jsonify(makeCells(data, ["timestamp", "min", "max", "median", "count", "lost"]))
     except sqlite3.Error, e:
         
         print "Error %s:" % e.args[0]
