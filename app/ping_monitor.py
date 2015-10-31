@@ -20,7 +20,7 @@ fields = [
 fieldsAndIndices = [ (i, v[0], v[1]) for i, v in enumerate(fields)]
 
 def makeCells(dbResults, columns):
-    
+    print "Making cells"
     filteredCols = [ (i, n, t) for i, n, t in fieldsAndIndices if n in columns ]
     
     filteredCols.sort(key=lambda x: columns.index(x[1]))
@@ -56,7 +56,10 @@ def pings():
         
         data = cur.fetchall()
         print "Fetched data"
-        return jsonify(makeCells(data, ["timestamp", "min", "max", "median", "count", "lost"]))
+        
+        cells = makeCells(data, ["timestamp", "min", "max", "median", "count", "lost"])
+        print "Jsonifying"
+        return jsonify(cells)
     except sqlite3.Error, e:
         
         print "Error %s:" % e.args[0]
