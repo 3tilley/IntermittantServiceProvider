@@ -1,5 +1,6 @@
 # Project specific files
 data.db
+data_old.db
 *.pyc
 
 # Windows image file caches

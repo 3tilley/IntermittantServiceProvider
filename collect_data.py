@@ -16,7 +16,11 @@ CREATE TABLE ping(
     max         DOUBLE,
     mean        DOUBLE,
     median      DOUBLE,
-    stdev       DOUBLE
+    stdev       DOUBLE,
+    countabove25    INT,
+    countabove50    INT,
+    countabove75    INT,
+    countabove100   INT
 );
 
 CREATE TABLE target(
@@ -24,6 +28,9 @@ CREATE TABLE target(
     hostaddress VARCHAR(50)
 );
 '''
+
+def count_above_x(lst, x):
+    return sum(i is None or i > x for i in lst)
 
 def pings_to_dict(pings):
     d = {
@@ -33,14 +40,20 @@ def pings_to_dict(pings):
         "max" : max(pings),
         "mean" : statistics.mean(pings),
         "median" : statistics.median(pings),
-        "stdev" : statistics.stdev(pings)
+        "stdev" : statistics.stdev(pings),
+        "countabove25"  : count_above_x(pings, 25),
+        "countabove50"  : count_above_x(pings, 50),
+        "countabove75"  : count_above_x(pings, 75),
+        "countabove100" : count_above_x(pings, 100)
+        
     }
     return d
     
 def make_insert_statement(host_key, timestamp, is_wifi, p):
-    s = "INSERT INTO ping VALUES({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9});"\
+    s = "INSERT INTO ping VALUES({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13});"\
     .format(timestamp, host_key, int(is_wifi), p["count"], p["lost"], p["min"], p["max"],\
-                p["mean"], p["median"], p["stdev"])
+                p["mean"], p["median"], p["stdev"],
+                p["countabove25"], p["countabove50"], p["countabove75"], p["countabove100"])
     return s
     
 def to_timestamp(dt):
@@ -60,6 +73,8 @@ def make_ping_list(dest_addr, timeout=2, count=10, psize=64):
         if delay != None:
             delay = delay * 1000
             plist.append(delay)
+        else:
+            plist.append(None)
         
     return plist
         
@@ -72,17 +87,20 @@ if __name__ == "__main__":
         
         cur = con.cursor()
         
-        url = "www.google.com"
+        cur.execute("select * from target")
+        hosts = cur.fetchall()
         
-        p = make_ping_list(url, count=10)
-        d = pings_to_dict(p)
-        s = make_insert_statement(1, to_timestamp(datetime.utcnow()), False, d)
-        
-        print s
+        for k, url in hosts:
+            
+            p = make_ping_list(url, count=10)
+            d = pings_to_dict(p)
+            s = make_insert_statement(k, to_timestamp(datetime.utcnow()), False, d)
+            
+            print s
           
-        cur.execute(s)
-        con.commit()
-        print "Ping data commited"
+            cur.execute(s)
+            con.commit()
+            print "Ping data commited"
 #        data = cur.fetchone()
         
 #        print "SQLite version: %s" % data                

@@ -43,6 +43,10 @@ def index():
     print "Loading index"
     return render_template("index.html")
     
+@app.route('/test')
+def test():
+    return "Hello, World!"
+    
 @app.route('/pings')
 def pings():
     con = None
