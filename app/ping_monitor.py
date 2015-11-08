@@ -72,7 +72,33 @@ def pings():
         
         if con:
             con.close()
+            
+@app.route('/hosts')
+def hosts():
+    con = None
+    try:
+        print "Connecting to db"
+        con = sqlite3.connect(os.path.join("..","data.db"))
+        print "Connected"
+        cur = con.cursor()
         
+        cur.execute("select hostKey, hostAddress from target")
+        
+        print "Fetching data"
+        data = cur.fetchall()
+        
+        print data
+        
+        print "Jsonifying"
+        return jsonify(data)
+    except sqlite3.Error, e:
+        
+        print "Error %s:" % e.args[0]
+        
+    finally:
+        
+        if con:
+            con.close()
     
 if __name__ == "__main__":
 #    pings()

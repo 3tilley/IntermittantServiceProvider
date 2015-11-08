@@ -20,107 +20,139 @@ function drawChart() {
           dataType: "json",
           async: false
           }).responseJSON;
-          
+      
+      var hostData = $.ajax({
+          url: "/hosts",
+          dataType: "json",
+          async: false
+          }).responseJSON;
+      
         jsonData.rows = jQuery.map(jsonData.rows, function(val) {
           val.c[0].v = new Date(val.c[0].v * 1000);
           return val;
         });
 
-       //var data = new google.visualization.DataTable(jsonData).sort("timestamp");
        var data = new google.visualization.DataTable(jsonData);
        data.sort("timestamp");
            // use a DataView to calculate an x-day moving average
-    var days = 60;
+        var days = 60;
+        
+        timestampInd = 0;
+        hostInd = 6;
+        medianInd = 3;
+        
+        metrics = {"timestamp" : 0,
+                "min" : 1,
+                "max" : 2,
+                "median" : 3,
+                "count" : 4,
+                "lost" : 5,
+                "host" : 6}
+        
+        var vals = data.getDistinctValues(metrics["host"]);
+        vals.sort();
+        
+        var dataPivot = new google.visualization.DataTable();
+        dataPivot.addRows(data.getNumberOfRows() / vals.length);
+        
+        var valsDict = new Array();
+        
+            
+        var columns = [0];
+        var series = {};
+        
+        
     
-    timestampInd = 0;
-    hostInd = 6;
-    medianInd = 3;
-    var vals = data.getDistinctValues(hostInd);
-    vals.sort();
-    
-    var dataPivot = new google.visualization.DataTable();
-    dataPivot.addRows(data.getNumberOfRows() / vals.length);
-    
-    var valsDict = new Array();
+        var options = {
+        title: 'Pings',
+        curveType: 'line',
+        vAxes: {0: {
+                    gridlines: {color: 'transparent'},
+                    },
+                1: {gridlines: {color: 'transparent'},
+                    format:"0.0%",
+                    viewWindow: {min:0}},
+                },
+        series: series
+        };
     
         
-    var columns = [0];
-    var series = {};
-    
-    
-
-    var options = {
-      title: 'Pings',
-      curveType: 'line',
-      vAxes: {0: {
-                  gridlines: {color: 'transparent'},
-                  },
-              1: {gridlines: {color: 'transparent'},
-                  format:"0.0%",
-                  viewWindow: {min:0}},
-              },
-      series: series
-    };
-
-    
-    dataPivot.addColumn("datetime", "timestamp");
-    for (var i = 0; i < vals.length; i++) {
-        columns.push(vals[i]);
-        dataPivot.addColumn("number", vals[i]);
-        valsDict[vals[i]] = i;
-        if (i >= 0) {
-          series[i] = {};
-        }
-    }
-    
-    // 
-
-    
-    // This needs to be done properly
-    var valsNum = vals.length;
-    var outerCounter = 0;
-    var innerCounter = 0;
-    for (var i = 0; i < data.getNumberOfRows(); i++) {
+        dataPivot.addColumn("datetime", "timestamp");
         
-        if (innerCounter==0) {
-            dataPivot.setValue(outerCounter, 0, data.getValue(i, 0));
-        }
-        //ind = 
-        dataPivot.setCell(outerCounter, valsDict[data.getValue(i, hostInd)] + 1, data.getValue(i, medianInd) );
-        if (innerCounter == valsNum) {
-            outerCounter++;
-            innerCounter = 0;
-        } else {
-            innerCounter++;
-        }
-    }
-    
-    // for (var i = 0; i < data.getNumberOfColumns(); i++) {
-    //     columns.push(i);
-    //     if (i > 0) {
-    //         series[i - 1] = {};
-    //     }
-    // }
-    
-    
-    function rollingAverage(colIndex, rollPeriod, dt, row) {
-        // calculate average of closing value for last x days,
-        // if we are x or more days into the data set
-        if (row >= rollPeriod - 1) {
-            var total = 0;
-            for (var i = 0; i < rollPeriod; i++) {
-                total += dt.getValue(row - i, colIndex);
+        for (var i = 0; i < vals.length; i++) {
+            columns.push(vals[i]);
+            dataPivot.addColumn("number", hostData[vals[i]], vals[i]);
+            valsDict[vals[i]] = i;
+            if (i >= 0) {
+            series[i] = {};
             }
-            var avg = (1.0 * total) / rollPeriod;
-            return {v: avg, f: avg.toFixed(2)};
         }
-        else {
-            // return null for < x days
-            return null;
-        }
-    }
+        
+        // 
     
-    var view = new google.visualization.DataView(dataPivot, options);
+        
+        // This needs to be done properly
+        var valsNum = vals.length;
+        
+        var currentMetric = null;
+        
+        function setMetric(table, newMetric) {
+            
+            if (currentMetric == newMetric) {
+                return;
+            }
+    
+            var outerCounter = 0;
+            var innerCounter = 0;
+        
+            for (var i = 0; i < data.getNumberOfRows(); i++) {
+                
+                if (innerCounter==0) {
+                    dataPivot.setValue(outerCounter, 0, data.getValue(i, metrics["timestamp"]));
+                }
+        
+                table.setCell(outerCounter,
+                                valsDict[data.getValue(i, metrics["host"])] + 1,
+                                data.getValue(i, metrics[newMetric]) );
+                if (innerCounter == valsNum) {
+                    outerCounter++;
+                    innerCounter = 0;
+                } else {
+                    innerCounter++;
+                }
+            }
+            
+            currentMetric = newMetric;
+            return;
+        };
+        
+        // for (var i = 0; i < data.getNumberOfColumns(); i++) {
+        //     columns.push(i);
+        //     if (i > 0) {
+        //         series[i - 1] = {};
+        //     }
+        // }
+        
+        
+        function rollingAverage(colIndex, rollPeriod, dt, row) {
+            // calculate average of closing value for last x days,
+            // if we are x or more days into the data set
+            if (row >= rollPeriod - 1) {
+                var total = 0;
+                for (var i = 0; i < rollPeriod; i++) {
+                    total += dt.getValue(row - i, colIndex);
+                }
+                var avg = (1.0 * total) / rollPeriod;
+                return {v: avg, f: avg.toFixed(2)};
+            }
+            else {
+                // return null for < x days
+                return null;
+            }
+        }
+        
+        setMetric(dataPivot, "median");
+        var view = new google.visualization.DataView(dataPivot, options);
     // view.setColumns([0, 1, 2, 3, {
     //     type: 'number',
     //     label: days + '-min packet drop average',
@@ -153,42 +185,76 @@ function drawChart() {
 
         chart.draw(view, options);
         
-        google.visualization.events.addListener(chart, 'select', function () {
-          var sel = chart.getSelection();
-          // if selection length is 0, we deselected an element
-          if (sel.length > 0) {
-              // if row is undefined, we clicked on the legend
-              if (sel[0].row === null) {
-                  var col = sel[0].column;
-                  if (columns[col] == col) {
-                      // hide the data series
-                      columns[col] = {
-                          label: dataPivot.getColumnLabel(col),
-                          type: dataPivot.getColumnType(col),
-                          calc: function () {
-                              return null;
-                          }
-                      };
-                      
-                      // grey out the legend entry
-                      series[col - 1].color = '#CCCCCC';
-                  }
-                  else {
-                      // show the data series
-                      columns[col] = col;
-                      series[col - 1].color = null;
-                  }
-                  var view = new google.visualization.DataView(dataPivot);
-                  view.setColumns(columns);
-                  chart.draw(view, options);
-              }
-          }
-      });
+        var alreadyChecked = false;
+        
+        
+        // Add tags below
+        for (var key in metrics) {
+            
+            if (key != "timestamp" && key != "host") {
+            
+                var firstCheck = "";
+                
+                if (!alreadyChecked) {
+                    firstCheck = " checked ";
+                    alreadyChecked = true;
+                }
+                
+                var radioBtn = $('<label for="' +  key + '">' + key +
+                                    '</label><input type="radio" name="metric" value="' +
+                                    key + '"' + firstCheck +'/>');
+                radioBtn.appendTo('#metrics');
+            }
+        }
 
+        $('input:radio').change(
+            function(){
+                setMetric(dataPivot, this.value);
+                var view = new google.visualization.DataView(dataPivot, options);
+                chart.draw(view, options);
+            }
+        ); 
+
+        // ---------------
+        
+        google.visualization.events.addListener(chart, 'select', function () {
+            var sel = chart.getSelection();
+            // if selection length is 0, we deselected an element
+            if (sel.length > 0) {
+                // if row is undefined, we clicked on the legend
+                if (sel[0].row === null) {
+                    var col = sel[0].column;
+                    if (columns[col] == col) {
+                        // hide the data series
+                        columns[col] = {
+                            //label:  hostData[dataPivot.getColumnLabel(col).toString()],
+                            label: dataPivot.getColumnLabel(col),
+                            type: dataPivot.getColumnType(col),
+                            calc: function () {
+                                return null;
+                            }
+                        };
+                        
+                        // grey out the legend entry
+                        series[col - 1].color = '#CCCCCC';
+                    }
+                    else {
+                        // show the data series
+                        columns[col] = col;
+                        series[col - 1].color = null;
+                    }
+                    var view = new google.visualization.DataView(dataPivot);
+                    view.setColumns(columns);
+                    chart.draw(view, options);
+                }
+            }
+        });
       }
     </script>
   </head>
   <body>
-    <div id="curve_chart" style="width: 100%; height: 100%"></div>
+      <form id="metrics">
+      </form>
+      <div id="curve_chart" style="width: 100%; height: 100%"></div>
   </body>
 </html>
