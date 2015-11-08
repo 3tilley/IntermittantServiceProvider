@@ -61,7 +61,7 @@ def pings():
         data = cur.fetchall()
         print "Fetched data"
         
-        cells = makeCells(data, ["timestamp", "min", "max", "median", "count", "lost"])
+        cells = makeCells(data, ["timestamp", "min", "max", "median", "count", "lost", "host"])
         print "Jsonifying"
         return jsonify(cells)
     except sqlite3.Error, e:

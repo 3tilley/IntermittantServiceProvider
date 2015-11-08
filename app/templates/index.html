@@ -46,10 +46,48 @@ function drawChart() {
           return val;
         });
 
-        var data = new google.visualization.DataTable(jsonData);
-       
+       //var data = new google.visualization.DataTable(jsonData).sort("timestamp");
+       var data = new google.visualization.DataTable(jsonData);
+       data.sort("timestamp");
            // use a DataView to calculate an x-day moving average
     var days = 60;
+    
+    timestampInd = 0;
+    hostInd = 6;
+    medianInd = 3;
+    var vals = data.getDistinctValues(hostInd);
+    vals.sort();
+    
+    var dataPivot = new google.visualization.DataTable();
+    dataPivot.addRows(data.getNumberOfRows() / vals.length);
+    
+    var valsDict = new Array(); 
+    
+    dataPivot.addColumn("datetime", "timestamp");
+    for (var i = 0; i < vals.length; i++) {
+        dataPivot.addColumn("number", vals[i]);
+        valsDict[vals[i]] = i;
+    }
+    
+    // This needs to be done properly
+    var valsNum = vals.length;
+    var outerCounter = 0;
+    var innerCounter = 0;
+    for (var i = 0; i < data.getNumberOfRows(); i++) {
+        
+        if (innerCounter==0) {
+            dataPivot.setValue(outerCounter, 0, data.getValue(i, 0));
+        }
+        //ind = 
+        dataPivot.setCell(outerCounter, valsDict[data.getValue(i, hostInd)] + 1, data.getValue(i, medianInd) );
+        if (innerCounter == valsNum) {
+            outerCounter++;
+            innerCounter = 0;
+        } else {
+            innerCounter++;
+        }
+    }
+    
     
     function rollingAverage(colIndex, rollPeriod, dt, row) {
         // calculate average of closing value for last x days,
@@ -99,7 +137,7 @@ function drawChart() {
        
         var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
 
-        chart.draw(view, options);
+        chart.draw(dataPivot);//, options);
       }
     </script>
   </head>
